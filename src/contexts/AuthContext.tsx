@@ -8,7 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { MASTER_INVITE_CODE } from '@/lib/inviteCodes';
+import { MASTER_INVITE_CODE, generateInviteCode } from '@/lib/inviteCodes';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -97,13 +97,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Generate unique invite code for the new user
+      const userInviteCode = generateInviteCode();
+
       // Store user data in Firestore
       await setDoc(doc(db, 'users', username), {
         uid: user.uid,
         username: username,
         email: email,
         createdAt: new Date(),
-        inviteCode: inviteCode
+        inviteCode: inviteCode,
+        userInviteCode: userInviteCode
+      });
+
+      // Create invite code document for this user
+      await setDoc(doc(db, 'inviteCodes', userInviteCode), {
+        code: userInviteCode,
+        usedCount: 0,
+        maxUses: 2,
+        createdAt: new Date(),
+        createdBy: user.uid,
+        isMaster: false
       });
 
       // Update invite code usage count (only for non-master codes)

@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, Github, Heart } from 'lucide-react';
 import { Logo3D } from '@/components/Logo3D';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { FooterBar } from '@/components/FooterBar';
 
 export default function About() {
   const navigate = useNavigate();
@@ -131,6 +132,7 @@ export default function About() {
           </div>
         </motion.div>
       </div>
+      <FooterBar />
     </div>
   );
 }

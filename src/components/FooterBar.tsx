@@ -1,4 +1,4 @@
-import { Home, PlusCircle, Info } from 'lucide-react';
+import { Home, PlusCircle, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 
@@ -32,14 +32,14 @@ export const FooterBar = () => {
             </Button>
           </Link>
 
-          <Link to="/about">
+          <Link to="/profile">
             <Button
               variant="ghost"
               size="icon"
-              className={`hover:bg-primary/10 ${isActive('/about') ? 'text-primary' : ''}`}
-              aria-label="About"
+              className={`hover:bg-primary/10 ${isActive('/profile') ? 'text-primary' : ''}`}
+              aria-label="Profile"
             >
-              <Info className="h-6 w-6" />
+              <User className="h-6 w-6" />
             </Button>
           </Link>
         </div>
