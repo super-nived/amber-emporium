@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Copy, Users, LogOut, Check } from 'lucide-react';
+import { ArrowLeft, Copy, Users, LogOut, Check, Share2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +29,7 @@ export default function Profile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +86,34 @@ export default function Profile() {
     }
   };
 
+  const shareInviteLink = async () => {
+    if (!profile?.userInviteCode) return;
+    
+    const inviteUrl = `${window.location.origin}/signup?invite=${profile.userInviteCode}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join Amber Emporium',
+          text: 'Join me on Amber Emporium using my invite code!',
+          url: inviteUrl,
+        });
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          navigator.clipboard.writeText(inviteUrl);
+          toast.success('Invite link copied!');
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(inviteUrl);
+      setShared(true);
+      toast.success('Invite link copied!');
+      setTimeout(() => setShared(false), 2000);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -105,18 +134,20 @@ export default function Profile() {
     );
   }
 
+  const isInviteFull = invitees.length >= 2;
+
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-20 bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <div className="glass-card border-b sticky top-0 z-10">
+      <div className="glass-card border-b sticky top-0 z-10 backdrop-blur-lg bg-background/80">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:scale-105 transition-transform">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Profile</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Profile</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive transition-colors">
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
@@ -131,94 +162,152 @@ export default function Profile() {
           className="space-y-6"
         >
           {/* User Info Card */}
-          <Card className="p-6 space-y-4">
-            <div className="text-center pb-4 border-b">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/50 mx-auto mb-4 flex items-center justify-center text-3xl font-bold">
+          <Card className="p-6 space-y-4 border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="text-center pb-4 border-b border-primary/10">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200 }}
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-primary/80 to-primary/50 mx-auto mb-4 flex items-center justify-center text-4xl font-bold shadow-lg ring-4 ring-primary/20"
+              >
                 {profile?.username.charAt(0).toUpperCase()}
-              </div>
-              <h2 className="text-2xl font-bold">{profile?.username}</h2>
-              <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              </motion.div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">{profile?.username}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{profile?.email}</p>
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                <span className="text-sm text-muted-foreground">Member Since</span>
-                <span className="font-medium">
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10"
+              >
+                <span className="text-sm font-medium text-muted-foreground">Member Since</span>
+                <span className="font-semibold">
                   {profile?.createdAt?.toLocaleDateString()}
                 </span>
-              </div>
-              <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                <span className="text-sm text-muted-foreground">Signed Up With</span>
-                <span className="font-medium font-mono">{profile?.inviteCode}</span>
-              </div>
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex justify-between items-center p-4 rounded-xl bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/10"
+              >
+                <span className="text-sm font-medium text-muted-foreground">Signed Up With</span>
+                <span className="font-semibold font-mono text-primary">{profile?.inviteCode}</span>
+              </motion.div>
             </div>
           </Card>
 
           {/* Invite Code Card */}
           {profile?.userInviteCode && (
-            <Card className="p-6 space-y-4">
+            <Card className="p-6 space-y-4 border-primary/30 shadow-lg hover:shadow-xl transition-all bg-gradient-to-br from-card to-primary/5">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Your Invite Code</h3>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold">Your Invite Code</h3>
               </div>
               
-              <div className="p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl font-bold font-mono tracking-wider">
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border-2 border-primary/30 shadow-inner">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-3xl font-bold font-mono tracking-wider text-primary">
                     {profile.userInviteCode}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={copyInviteCode}
-                    className="hover:bg-primary/10"
+                    className="hover:bg-primary/20 hover:scale-110 transition-all"
                   >
                     {copied ? (
                       <Check className="h-5 w-5 text-green-500" />
                     ) : (
-                      <Copy className="h-5 w-5" />
+                      <Copy className="h-5 w-5 text-primary" />
                     )}
                   </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   Share this code to invite up to 2 users
                 </p>
+                
+                {/* Share Button */}
+                <Button
+                  onClick={shareInviteLink}
+                  disabled={isInviteFull}
+                  className={`w-full ${isInviteFull ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'} transition-all`}
+                  variant={isInviteFull ? "outline" : "default"}
+                >
+                  {shared ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Shared!
+                    </>
+                  ) : isInviteFull ? (
+                    <>
+                      <Users className="h-4 w-4 mr-2" />
+                      All Slots Used
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share Invite Link
+                    </>
+                  )}
+                </Button>
               </div>
 
-              <div className="pt-2">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium">Invited Users ({invitees.length}/2)</h4>
-                  <span className="text-sm px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    {2 - invitees.length} remaining
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-lg flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Invited Users ({invitees.length}/2)
+                  </h4>
+                  <span className={`text-sm px-3 py-1.5 rounded-full font-semibold ${
+                    isInviteFull 
+                      ? 'bg-destructive/10 text-destructive' 
+                      : 'bg-primary/10 text-primary'
+                  }`}>
+                    {isInviteFull ? 'Full' : `${2 - invitees.length} remaining`}
                   </span>
                 </div>
 
                 {invitees.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {invitees.map((invitee, index) => (
-                      <div
+                      <motion.div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-primary/5 to-background border border-primary/10 hover:border-primary/20 transition-all"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center font-bold text-lg shadow-md">
                             {invitee.username.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium">{invitee.username}</p>
+                            <p className="font-semibold">{invitee.username}</p>
                             <p className="text-xs text-muted-foreground">
                               Joined {invitee.createdAt?.toLocaleDateString()}
                             </p>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No users invited yet</p>
-                    <p className="text-sm">Share your code to invite friends!</p>
+                  <div className="text-center py-12 px-4 rounded-xl bg-muted/30 border border-dashed border-primary/20">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200 }}
+                    >
+                      <Users className="h-16 w-16 mx-auto mb-3 text-primary/40" />
+                    </motion.div>
+                    <p className="font-medium text-muted-foreground">No users invited yet</p>
+                    <p className="text-sm text-muted-foreground/70 mt-1">Share your code to invite friends!</p>
                   </div>
                 )}
               </div>
