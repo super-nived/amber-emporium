@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { FooterBar } from '@/components/FooterBar';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 
@@ -45,19 +45,45 @@ export default function Profile() {
         const userDoc = await getDoc(doc(db, 'users', username));
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          
+          // Generate invite code if user doesn't have one
+          let userInviteCode = userData.userInviteCode;
+          if (!userInviteCode) {
+            const { generateInviteCode } = await import('@/lib/inviteCodes');
+            userInviteCode = generateInviteCode();
+            
+            // Update user document with new invite code
+            await setDoc(doc(db, 'users', username), {
+              ...userData,
+              userInviteCode
+            }, { merge: true });
+            
+            // Create invite code document
+            await setDoc(doc(db, 'inviteCodes', userInviteCode), {
+              code: userInviteCode,
+              usedCount: 0,
+              maxUses: 2,
+              createdAt: new Date(),
+              createdBy: user.uid,
+              isMaster: false
+            });
+            
+            toast.success('Invite code generated!');
+          }
+          
           setProfile({
             username,
             email: userData.email,
             createdAt: userData.createdAt?.toDate(),
             inviteCode: userData.inviteCode,
-            userInviteCode: userData.userInviteCode
+            userInviteCode
           });
 
           // Get users who signed up with this user's invite code
-          if (userData.userInviteCode) {
+          if (userInviteCode) {
             const inviteesQuery = query(
               collection(db, 'users'),
-              where('inviteCode', '==', userData.userInviteCode)
+              where('inviteCode', '==', userInviteCode)
             );
             const inviteesSnapshot = await getDocs(inviteesQuery);
             const inviteesData = inviteesSnapshot.docs.map(doc => ({
