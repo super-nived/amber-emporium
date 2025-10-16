@@ -1,23 +1,64 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, MapPin, MessageCircle, Package, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageCircle, Package, ExternalLink, Circle } from 'lucide-react';
 import { getProducts, Product } from '@/lib/localStorage';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChatBox } from '@/components/ChatBox';
+import { RealtimeChatBox } from '@/components/RealtimeChatBox';
+import { useAuth } from '@/contexts/AuthContext';
+import { getOrCreateChat } from '@/hooks/useChat';
+import { listenToPresence } from '@/hooks/usePresence';
+import { toast } from 'sonner';
 
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [providerStatus, setProviderStatus] = useState<{ state: string } | null>(null);
 
   useEffect(() => {
     const products = getProducts();
     const found = products.find((p) => p.id === id);
     setProduct(found || null);
   }, [id]);
+
+  useEffect(() => {
+    if (!product?.providerId) return;
+    
+    // Listen to provider's online status
+    const unsubscribe = listenToPresence(product.providerId, (status) => {
+      setProviderStatus(status);
+    });
+
+    return () => unsubscribe();
+  }, [product?.providerId]);
+
+  const handleOpenChat = async () => {
+    if (!user || !product) {
+      toast.error('Please login to chat');
+      return;
+    }
+
+    // For demo purposes, use product.id as providerId if not set
+    const providerId = product.providerId || `provider_${product.id}`;
+
+    try {
+      const newChatId = await getOrCreateChat(
+        user.uid,
+        providerId,
+        product.id,
+        product.providerName,
+        user.email || 'User'
+      );
+      setChatId(newChatId);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      toast.error('Failed to open chat');
+    }
+  };
 
   if (!product) {
     return (
@@ -88,7 +129,15 @@ export default function ProductDetails() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Provider</p>
-                  <p className="font-semibold text-lg">{product.providerName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-lg">{product.providerName}</p>
+                    {providerStatus?.state === 'online' && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <Circle className="h-2 w-2 fill-current" />
+                        <span className="text-xs">Active</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {product.googleMapsUrl && (
                   <Button
@@ -120,7 +169,7 @@ export default function ProductDetails() {
             <div className="flex gap-3 pt-4">
               <Button
                 className="flex-1 gold-gradient text-lg h-12 hover:scale-105 transition-transform"
-                onClick={() => setChatOpen(true)}
+                onClick={handleOpenChat}
               >
                 <MessageCircle className="h-5 w-5 mr-2" />
                 Chat with Provider
@@ -132,11 +181,12 @@ export default function ProductDetails() {
 
       {/* Chat Modal */}
       <AnimatePresence>
-        {chatOpen && (
-          <ChatBox
-            productId={product.id}
+        {chatId && product && (
+          <RealtimeChatBox
+            chatId={chatId}
+            providerId={product.providerId || `provider_${product.id}`}
             providerName={product.providerName}
-            onClose={() => setChatOpen(false)}
+            onClose={() => setChatId(null)}
           />
         )}
       </AnimatePresence>

@@ -36,6 +36,7 @@ export interface Product {
   quantity: number;
   category: 'Cigarette' | 'Beer' | 'Wine' | 'Other';
   providerName: string;
+  providerId?: string;
   providerLocation: string;
   googleMapsUrl?: string;
   description: string;

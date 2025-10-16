@@ -13,9 +13,11 @@ import ProductDetails from "./pages/ProductDetails";
 import AddProduct from "./pages/AddProduct";
 import About from "./pages/About";
 import Profile from "./pages/Profile";
+import Chats from "./pages/Chats";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
+import { usePresence } from "./hooks/usePresence";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +52,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AppContent = () => {
+  const { user } = useAuth();
+  
+  // Enable presence tracking for authenticated users
+  usePresence(user?.uid || null);
+  
   useEffect(() => {
     // Initialize master invite code on app start
     initializeMasterInviteCode();
@@ -98,6 +105,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chats"
+          element={
+            <ProtectedRoute>
+              <Chats />
             </ProtectedRoute>
           }
         />
