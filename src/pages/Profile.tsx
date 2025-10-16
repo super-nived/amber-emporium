@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Copy, Users, LogOut, Check, Share2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Copy, Users, LogOut, Check, Sparkles } from 'lucide-react';
+import { MessageCircle, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -86,32 +87,20 @@ export default function Profile() {
     }
   };
 
-  const shareInviteLink = async () => {
+  const shareViaWhatsApp = () => {
     if (!profile?.userInviteCode) return;
-    
     const inviteUrl = `${window.location.origin}/signup?invite=${profile.userInviteCode}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join Amber Emporium',
-          text: 'Join me on Amber Emporium using my invite code!',
-          url: inviteUrl,
-        });
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          navigator.clipboard.writeText(inviteUrl);
-          toast.success('Invite link copied!');
-        }
-      }
-    } else {
-      navigator.clipboard.writeText(inviteUrl);
-      setShared(true);
-      toast.success('Invite link copied!');
-      setTimeout(() => setShared(false), 2000);
-    }
+    const message = `Join me on Amber Emporium using my invite code: ${profile.userInviteCode}\n\n${inviteUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('Opening WhatsApp...');
+  };
+
+  const shareViaInstagram = () => {
+    if (!profile?.userInviteCode) return;
+    const inviteUrl = `${window.location.origin}/signup?invite=${profile.userInviteCode}`;
+    navigator.clipboard.writeText(`Join me on Amber Emporium! Use code: ${profile.userInviteCode}\n${inviteUrl}`);
+    toast.success('Invite message copied! Paste it in Instagram.');
   };
 
   const handleLogout = async () => {
@@ -232,30 +221,37 @@ export default function Profile() {
                   Share this code to invite up to 2 users
                 </p>
                 
-                {/* Share Button */}
-                <Button
-                  onClick={shareInviteLink}
-                  disabled={isInviteFull}
-                  className={`w-full ${isInviteFull ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'} transition-all`}
-                  variant={isInviteFull ? "outline" : "default"}
-                >
-                  {shared ? (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Shared!
-                    </>
-                  ) : isInviteFull ? (
-                    <>
-                      <Users className="h-4 w-4 mr-2" />
-                      All Slots Used
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share Invite Link
-                    </>
+                {/* Share Buttons Section */}
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-center text-muted-foreground">Share via</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      onClick={shareViaWhatsApp}
+                      disabled={isInviteFull}
+                      className={`w-full ${isInviteFull ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'} transition-all bg-[#25D366] hover:bg-[#20BA5A]`}
+                      variant={isInviteFull ? "outline" : "default"}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      WhatsApp
+                    </Button>
+                    
+                    <Button
+                      onClick={shareViaInstagram}
+                      disabled={isInviteFull}
+                      className={`w-full ${isInviteFull ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'} transition-all bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:opacity-90`}
+                      variant={isInviteFull ? "outline" : "default"}
+                    >
+                      <Instagram className="h-4 w-4 mr-2" />
+                      Instagram
+                    </Button>
+                  </div>
+                  
+                  {isInviteFull && (
+                    <p className="text-xs text-center text-destructive font-medium mt-2">
+                      All invite slots used (2/2)
+                    </p>
                   )}
-                </Button>
+                </div>
               </div>
 
               <div className="pt-4">
