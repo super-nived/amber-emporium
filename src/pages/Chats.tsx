@@ -12,7 +12,8 @@ import { FooterBar } from '@/components/FooterBar';
 export default function Chats() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [buyingChats, setBuyingChats] = useState<Chat[]>([]);
+  const [sellingChats, setSellingChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<{ chatId: string; providerId: string; name: string } | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [onlineStatus, setOnlineStatus] = useState<Record<string, boolean>>({});
@@ -21,7 +22,22 @@ export default function Chats() {
     if (!user) return;
 
     const unsubscribe = getUserChats(user.uid, async (fetchedChats) => {
-      setChats(fetchedChats);
+      // Separate chats into buying and selling
+      const buying: Chat[] = [];
+      const selling: Chat[] = [];
+      
+      fetchedChats.forEach((chat) => {
+        // If I'm the first participant, I initiated the chat (buying)
+        // If I'm the second participant, someone contacted me (selling)
+        if (chat.participants[0] === user.uid) {
+          buying.push(chat);
+        } else {
+          selling.push(chat);
+        }
+      });
+      
+      setBuyingChats(buying);
+      setSellingChats(selling);
 
       // Get unread counts for each chat
       const counts: Record<string, number> = {};
@@ -77,25 +93,15 @@ export default function Chats() {
             <h1 className="text-3xl font-bold">Messages</h1>
           </div>
 
-          {/* Chat List */}
-          <div className="space-y-3">
-            {chats.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-card rounded-2xl p-8 text-center"
-              >
-                <MessageCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">No messages yet</h3>
-                <p className="text-muted-foreground">
-                  Start chatting with providers from product pages
-                </p>
-              </motion.div>
-            ) : (
-              chats.map((chat, index) => {
+          {/* Selling Section */}
+          {sellingChats.length > 0 && (
+            <div className="space-y-3 mb-8">
+              <h2 className="text-xl font-semibold">Selling</h2>
+              <p className="text-sm text-muted-foreground">Messages about your products</p>
+              {sellingChats.map((chat, index) => {
                 const otherUserId = chat.participants.find((id) => id !== user?.uid);
                 const isOnline = otherUserId ? onlineStatus[otherUserId] : false;
-                const chatName = user?.uid === chat.participants[0] ? chat.providerName : chat.userName;
+                const chatName = chat.userName || 'Buyer';
                 const unreadCount = unreadCounts[chat.id] || 0;
 
                 return (
@@ -139,9 +145,80 @@ export default function Chats() {
                     </div>
                   </motion.div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
+
+          {/* Buying Section */}
+          {buyingChats.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-xl font-semibold">Buying</h2>
+              <p className="text-sm text-muted-foreground">Your inquiries to sellers</p>
+              {buyingChats.map((chat, index) => {
+                const otherUserId = chat.participants.find((id) => id !== user?.uid);
+                const isOnline = otherUserId ? onlineStatus[otherUserId] : false;
+                const chatName = chat.providerName || 'Seller';
+                const unreadCount = unreadCounts[chat.id] || 0;
+
+                return (
+                  <motion.div
+                    key={chat.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleChatClick(chat)}
+                    className="glass-card rounded-2xl p-4 cursor-pointer hover:bg-accent/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                          <MessageCircle className="h-6 w-6 text-primary" />
+                        </div>
+                        {isOnline && (
+                          <Circle className="absolute bottom-0 right-0 h-3 w-3 fill-green-500 text-green-500 ring-2 ring-background" />
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h3 className="font-semibold truncate">{chatName}</h3>
+                          {chat.lastUpdated && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {chat.lastUpdated.toDate().toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {chat.lastMessage || 'No messages yet'}
+                        </p>
+                      </div>
+
+                      {unreadCount > 0 && (
+                        <div className="bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold">
+                          {unreadCount}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {buyingChats.length === 0 && sellingChats.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-2xl p-8 text-center"
+            >
+              <MessageCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">No messages yet</h3>
+              <p className="text-muted-foreground">
+                Start chatting with sellers from product pages
+              </p>
+            </motion.div>
+          )}
         </div>
       </div>
 

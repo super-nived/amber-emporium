@@ -15,9 +15,11 @@ import {
 } from '@/components/ui/select';
 import { addProduct } from '@/lib/localStorage';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AddProduct() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -59,6 +61,7 @@ export default function AddProduct() {
       quantity: parseInt(formData.quantity),
       category: formData.category,
       providerName: formData.providerName || 'Anonymous Seller',
+      providerId: user?.uid,
       providerLocation: formData.providerLocation || 'Location not specified',
       googleMapsUrl: formData.googleMapsUrl,
       description: formData.description,
